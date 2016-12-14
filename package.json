@@ -1,0 +1,25 @@
+{
+  "name": "speed_my_site",
+  "version": "1.0.0",
+  "description": "A Nodejs tool that can be used to clean up the load time of websites by finding the issues that are slowing it down for no reason",
+  "main": "SpeedMySite.js",
+  "dependencies": {
+    "minimist": "^1.2.0",
+    "nightmare": "^2.8.1",
+    "request": "^2.79.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sjfricke/SpeedMySite.git"
+  },
+  "author": "Spencer Fricke",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sjfricke/SpeedMySite/issues"
+  },
+  "homepage": "https://github.com/sjfricke/SpeedMySite#readme"
+}
