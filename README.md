@@ -21,6 +21,10 @@ It will output a folder with a write up of what you can do to speed up the site,
    * Example: `node SpeedMySite http://www.google.com`
   * `-o` output location of results
    * Example: `node SpeedMySite http://www.google.com -o ~/myOtherFolder`
+  
+  -------
+  Future
+  
   * `--images` settings for any output images
    * Options:
      * `true` -Default, adds a folder for both old and new photos
