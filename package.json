@@ -4,9 +4,11 @@
   "description": "A Nodejs tool that can be used to clean up the load time of websites by finding the issues that are slowing it down for no reason",
   "main": "SpeedMySite.js",
   "dependencies": {
+    "fs-extra": "^1.0.0",
     "minimist": "^1.2.0",
     "nightmare": "^2.8.1",
-    "request": "^2.79.0"
+    "request": "^2.79.0",
+    "sanitize-filename": "^1.6.1"
   },
   "devDependencies": {},
   "scripts": {

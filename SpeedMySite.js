@@ -1,5 +1,10 @@
 var Nightmare = require('nightmare'); //used to run the headless browser
 var nightmare = Nightmare({ show: false }); //default is true
+var image_process = require("./helper_functions/image_process");
+var sanitize = require("sanitize-filename");
+var fs = require('fs-extra');
+
+var image_count = 0;
 
 var argv = require('minimist')(process.argv.slice(3)); //used for easy param parsing
 
@@ -15,6 +20,9 @@ if (!process.argv[2]) {
     process.exit(1);
 }
 
+var output_location = argv.o;
+var known_black_list = image_process.blackList();
+
 //cleans URL if forgot http cause Nightmare cant use it then
 if (process.argv[2].substring(0,7) != "http://") process.argv[2] = "http://" + process.argv[2];
 
@@ -25,29 +33,85 @@ nightmare
     .inject('js', 'files/jquery.min.js') //TODO, not force pages with jQuery to load
     //Work around to check if jquery is there or not
     //.evaluate(function () {if (typeof jQuery != 'undefined') { return jQuery.fn.jquery; } else {  return  jQuery.fn.jquery; }})
-    .evaluate(function(){
-        var image_list = [];
-        //loops through and gets all the images on page
-        //uses jQuery
+    .evaluate(function(known_black_list){
+        var all_images = [];
+            
+        //loops through and gets all the images on page useing jQuery
         $('*').each(function(){ 
             var backImg;
+            var good_img = true;
+            var temp_object = {}; //need to be reset each loop #async
             
-            if ($(this).is('img')) {
-                image_list.push($(this));
+            //image is inline of html
+            if ($(this).is('img') ) {
+                
+                //check if image url is on the known black list of URLs
+                for(var i = 0; i < known_black_list.length; i++) {
+                    if ( $(this)[0].src.indexOf(known_black_list[i]) != -1) {
+                        good_img = false;
+                        break; //found image on list
+                    }
+                }
+                if (good_img) {                    
+                    temp_object.image = $(this);
+                    temp_object.src = ( $(this)[0].src );
+                    
+                    all_images.push(temp_object);
+                }
+                
             } else {
+                //image is embedded as a background image via css    
+                //uses regex to grab image url from it
                 backImg = $(this).css('background-image');
-                if (backImg != 'none') {
-                    image_list.push($(this));
+                if (backImg != 'none') {     
+                    
+                    temp_object.image = $(this);
+                    
+                    var bg_url = $(this).css('background-image');
+                    bg_url = /^url\((['"]?)(.*)\1\)$/.exec(bg_url);
+                    temp_object.src = ( bg_url[2] );
+                    
+                    all_images.push(temp_object);
                 }
             }
-        });
+            
+            //dont push to all_image each time as most of the * are not images
+            
+        });       
+           
+        
+        return all_images;
     
-        return image_list.length;
-    })
+    }, known_black_list)
     .end()
     .then(function (result) {
-        console.log(result)
+        console.log(result.length + " images found\n");
+    
+        var directory = (argv.o) ? (argv.o + "/old") : "SpeedMySite_Results/old/";
+        
+        fs.ensureDirSync(directory, function (err) {
+          console.log(err) 
+          // dir has now been created, including the directory it is to be placed in
+        })
+    
+        for (var i = 0; i < result.length; i++) {  
+            if (result.src != 'undefined' || result.src != null){             
+                console.log(i + ": ");                
+                              
+                var img_name = directory + sanitize(result[i].src.substring(result[i].src.lastIndexOf("/") + 1));
+                
+                image_process.download(result[i].src, img_name, function(){
+                    console.log("image saved!");
+                    image_count++;
+                    
+                    if (image_count == result.length) {
+                        image_process.checkSize();
+                    }
+                    
+                });
+            }
+        }
     })
     .catch(function (error) {
-    console.error('Search failed:', error);
+        console.error('Search failed:', error);
     });
