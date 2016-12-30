@@ -5,6 +5,7 @@
   "main": "SpeedMySite.js",
   "dependencies": {
     "fs-extra": "^1.0.0",
+    "image-size": "^0.5.1",
     "minimist": "^1.2.0",
     "nightmare": "^2.8.1",
     "request": "^2.79.0",

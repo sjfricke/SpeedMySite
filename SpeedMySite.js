@@ -26,6 +26,15 @@ var known_black_list = image_process.blackList();
 //cleans URL if forgot http cause Nightmare cant use it then
 if (process.argv[2].substring(0,7) != "http://") process.argv[2] = "http://" + process.argv[2];
 
+if (argv.threshold) {
+    if (argv.threshold == NaN  || argv.threshold <= 0) {
+        console.log("--threshold needs to be a positive value representing the percentage");
+        process.exit(1);
+    }
+} else {
+    argv.threshold = 10; //default
+}
+
 nightmare
     .goto(process.argv[2])  
     .inject('js', 'files/jquery.min.js') //TODO, not force pages with jQuery to load
@@ -50,7 +59,9 @@ nightmare
                 }
                 if (good_img) {                    
                     temp_object.image = $(this);
-                    temp_object.src = ( $(this)[0].src );
+                    temp_object.src = ( $(this)[0].src );                     
+                    temp_object.display_width = $(this)[0].clientWidth;
+                    temp_object.display_height = $(this)[0].clientHeight;
                     
                     all_images.push(temp_object);
                 }
@@ -62,6 +73,8 @@ nightmare
                 if (backImg != 'none') {     
                     
                     temp_object.image = $(this);
+                    temp_object.display_width = $(this)[0].clientWidth;
+                    temp_object.display_height = $(this)[0].clientHeight;
                     
                     var bg_url = $(this).css('background-image');
                     bg_url = /^url\((['"]?)(.*)\1\)$/.exec(bg_url);
@@ -79,32 +92,42 @@ nightmare
     .end()
     .then(function (result) {
     
-        console.log(result.length + " images found\n");
+        console.log(result.length + " images found");
+        console.log("**************************");
     
-        var directory = (argv.o) ? (argv.o + "/old") : "SpeedMySite_Results/old/";
+        var directory_old = (argv.o) ? (argv.o + "/old/") : "SpeedMySite_Results/old/";
+        var directory_new = (argv.o) ? (argv.o + "/new/") : "SpeedMySite_Results/new/";
         
-        fs.ensureDirSync(directory, function (err) {
-          console.log(err) 
-          // dir has now been created, including the directory it is to be placed in
-        })
+    
+        // dir has now been created, including the directory it is to be placed in
+        fs.ensureDirSync(directory_old, function (err) { console.log(err); })
+        fs.ensureDirSync(directory_new, function (err) { console.log(err); })
     
         for (var i = 0; i < result.length; i++) {  
             if (result.src != 'undefined' || result.src != null){             
                 console.log(i + ": ");                
                               
-                var img_name = directory + sanitize(result[i].src.substring(result[i].src.lastIndexOf("/") + 1));
+                result[i].image_name = sanitize(result[i].src.substring(result[i].src.lastIndexOf("/") + 1));
+                result[i].file_name = directory_old + result[i].image_name;
                 
-                image_process.download(result[i].src, img_name, function(){                    
+                image_process.download(result[i].src, result[i].file_name, result[i].image_name, function(return_image){                    
                     image_count++;
-                    console.log("image saved! \t" + image_count + " of " + result.length);
+                    console.log(return_image + " saved! \t" + image_count + " of " + result.length);
                     
-                    if (image_count == result.length) {
-                        image_process.checkSize();
+                    
+                    if (image_count == result.length) {                        
+                        console.log("**************************");
+                        image_process.checkSize(result, argv.threshold, function(checked_images){
+                            image_process.resize(checked_images, directory_new, function(){
+                                
+                            })
+                        });
                     }
                     
                 });
             }
-        }
+        }    
+        console.log("**************************"); //barrier after file and url display
     })
     .catch(function (error) {
         console.error('Search failed:', error);
