@@ -1,6 +1,7 @@
-var fs = require('fs');
-var request = require('request');
-var sizeOf = require('image-size');
+var fs = require('fs'); //used to read and write to file
+var request = require('request'); //used to download
+var sizeOf = require('image-size'); //used to get size
+var resizeImg = require('resize-img');
 
 module.exports = {
     
@@ -31,12 +32,12 @@ module.exports = {
             
             //checks if size is out of size range
             //give 10% margin by default
-            if ((image_list[i].old_width >= image_list[i].display_width * (1 + threshold)) &&
-                (image_list[i].old_height >= image_list[i].display_height * (1 + threshold))
+            if ((image_list[i].old_width >= image_list[i].display_width * threshold) &&
+                (image_list[i].old_height >= image_list[i].display_height * threshold)
             ) {
                 image_list[i].resize = true;
-                image_list[i].new_width = image_list[i].display_width * (1 + threshold);
-                image_list[i].new_height = image_list[i].display_height * (1 + threshold);
+                image_list[i].new_width = Math.floor(image_list[i].display_width * threshold);
+                image_list[i].new_height = Math.floor(image_list[i].display_height * threshold);
             } else {
                 image_list[i].resize = false; //better to have false then undefined
             }
@@ -46,8 +47,23 @@ module.exports = {
         callback(image_list);
     },    
     
-    resize: function(image_list, directory, callback) {
-          
+    //directory passed in is new directory to place new photos
+    resize: function(image_list, directory, threshold, callback) {
+        var resize_inputs = [];
+        var resize_outputs = [];
+        
+        image_list.forEach(function(element, index, array) {
+            if (!element.resize) { 
+            //    continue; //skip image, its all good
+            } else {                
+                resizeImg(fs.readFileSync(element.file_name), 
+                          {width : element.new_width, height : element.new_height} )
+                    .then(function(buf){
+                        fs.writeFileSync(directory + element.image_name, buf);
+                    });   
+            }
+        });
+        
     },
     
     //used to return an array of known black list sites

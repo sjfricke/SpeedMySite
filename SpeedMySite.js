@@ -30,9 +30,11 @@ if (argv.threshold) {
     if (argv.threshold == NaN  || argv.threshold <= 0) {
         console.log("--threshold needs to be a positive value representing the percentage");
         process.exit(1);
+    } else {
+        argv.threshold = ((argv.threshold / 100) + 1); //valid threshold as a inclusive percent (ex: 110%)
     }
 } else {
-    argv.threshold = 10; //default
+    argv.threshold = ((10 / 100) + 1); //default - 110%
 }
 
 nightmare
@@ -118,7 +120,7 @@ nightmare
                     if (image_count == result.length) {                        
                         console.log("**************************");
                         image_process.checkSize(result, argv.threshold, function(checked_images){
-                            image_process.resize(checked_images, directory_new, function(){
+                            image_process.resize(checked_images, directory_new, argv.threshold, function(){
                                 
                             })
                         });
