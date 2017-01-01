@@ -1,12 +1,13 @@
 var Nightmare = require('nightmare'); //used to run the headless browser
 var nightmare = Nightmare({ show: false }); //default is true
-var image_process = require("./helper_functions/image_process"); //set of image processing functions
 var sanitize = require("sanitize-filename"); //used to make sure file names are correct
 var fs = require('fs-extra'); //used to make directory checking eaiser
-
-var image_count = 0; //used to count images 
-
 var argv = require('minimist')(process.argv.slice(3)); //used for easy param parsing
+
+
+var image_process = require("./helper_functions/image_process"); //set of image processing functions
+var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
+
 
 //Param Checking
 if (!process.argv[2]) {
@@ -97,8 +98,11 @@ nightmare
     .end()
     .then(function (result) {
     
-        console.log(result.length + " images found");
-        console.log("**************************");
+        __globals.image_count = result.length;
+    
+        console.log("**************************\n");
+        console.log(__globals.image_count + " images found");
+        console.log("**************************\n");
     
         var directory_old = (argv.o) ? (argv.o + "/old/") : "SpeedMySite_Results/old/";
         var directory_new = (argv.o) ? (argv.o + "/new/") : "SpeedMySite_Results/new/";
@@ -108,22 +112,52 @@ nightmare
         fs.ensureDirSync(directory_old, function (err) { console.log(err); })
         fs.ensureDirSync(directory_new, function (err) { console.log(err); })
     
-        for (var i = 0; i < result.length; i++) {  
+        for (var i = 0; i < __globals.image_count; i++) {  
             if (result.src != 'undefined' || result.src != null){             
                 console.log(i + ": ");                
                               
                 result[i].image_name = sanitize(result[i].src.substring(result[i].src.lastIndexOf("/") + 1));
                 result[i].file_name = directory_old + result[i].image_name;
+                result[i].file_size = -1;
                 
-                image_process.download(result[i].src, result[i].file_name, result[i].image_name, function(return_image){                    
-                    image_count++;
-                    console.log(return_image + " saved! \t" + image_count + " of " + result.length);
+                image_process.download(result[i].src, result[i].file_name, result[i].image_name, i, function(return_image, file_size, index){            
+                                        
+                    //returns file size in bytes, note 1024 not 1000 from bytes to KB
+                    result[index].file_size = file_size;
+                    
+                    //counts to wait to sync/barrier async for all images to download before resizing
+                    __globals.counter++;
+                    console.log(return_image + " saved! \t" + __globals.counter + " of " + __globals.image_count);
                     
                     
-                    if (image_count == result.length) {                        
+                    if (__globals.counter == __globals.image_count) {                        
                         console.log("**************************");
+                        __globals.counter = 0; //reset if used prior
+                        
                         image_process.checkSize(result, argv.threshold, function(checked_images){
-                            image_process.resize(checked_images, directory_new, argv.threshold, function(){
+                            image_process.resize(checked_images, directory_new, argv.threshold, function(element){
+                                
+                                 __globals.counter++;
+
+                                if (__globals.counter == __globals.resize_count) {   
+                                    //done, report time                                                       
+                                    console.log("\n**************************\n");
+                                    console.log("SpeedMySite Report:");
+                                    console.log("_____________________________");
+                                    console.log("Files found: " + __globals.image_count);
+                                    console.log("Images Resized: ");
+                                    for(var i = 0; i < __globals.resize_count; i++){
+                                        console.log("\t" + checked_images[i].image_name + " from " + checked_images[i].file_size + " to ");
+                                    } 
+                                    console.log("_____________________________");
+                                    console.log("Old files size: " + __globals.size.old + " bytes");
+                                    console.log("New files size: " + __globals.size.new + " bytes");
+                                    var total_saved = (__globals.size.old - __globals.size.new);
+                                    console.log("Total size saved: " + total_saved + " bytes");                                    
+                                    console.log("or\t" + (total_saved / 1024).toFixed(3) + " KB");
+                                    console.log("or\t" + (total_saved / 1024 / 1024).toFixed(3) + " MB");
+                                }
+                                
                                 
                             })
                         });

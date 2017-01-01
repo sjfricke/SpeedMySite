@@ -3,20 +3,23 @@ var request = require('request'); //used to download
 var sizeOf = require('image-size'); //used to get size
 var resizeImg = require('resize-img');
 
+var __globals = require("./globals"); //used to hold local variables across application;
+
+
 module.exports = {
     
-    download: function(uri, file_name, image_name, callback){
+    download: function(uri, file_name, image_name, index, callback){
         
         console.log("\turi: " + uri);
         console.log("\tfile name: " + file_name);
         
         request.head(uri, function(err, res, body){
             //console.log('content-type:', res.headers['content-type']);
-            //console.log('content-length:', res.headers['content-length']);
+            //console.log(file_name + " content-length: " + res.headers['content-length']);
             console.log("attempting: " + image_name);
             //downloads and sends callback when done
             request(uri).pipe(fs.createWriteStream(file_name)).on('close', function(){
-                callback(image_name);
+                callback(image_name, res.headers['content-length'], index);
             })
             .on('error', function(err){
                 console.error("DOWNLOAD ERROR:");
@@ -40,6 +43,8 @@ module.exports = {
                 (image_list[i].old_height >= image_list[i].display_height * threshold)
             ) {
                 image_list[i].resize = true;
+                __globals.size.old += parseInt(image_list[i].file_size); //to compare to size resized
+                __globals.resize_count++;
                 image_list[i].new_width = Math.floor(image_list[i].display_width * threshold);
                 image_list[i].new_height = Math.floor(image_list[i].display_height * threshold);
             } else {
@@ -64,6 +69,9 @@ module.exports = {
                           {width : element.new_width, height : element.new_height} )
                     .then(function(buf){
                         fs.writeFileSync(directory + element.image_name, buf);
+                        console.log("Resized file wrote to: " + directory + element.image_name);
+                        __globals.size.new += buf.byteLength;   
+                        callback(element);
                     });   
             }
         });
