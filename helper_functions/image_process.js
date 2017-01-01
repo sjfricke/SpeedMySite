@@ -13,10 +13,14 @@ module.exports = {
         request.head(uri, function(err, res, body){
             //console.log('content-type:', res.headers['content-type']);
             //console.log('content-length:', res.headers['content-length']);
-            
+            console.log("attempting: " + image_name);
             //downloads and sends callback when done
             request(uri).pipe(fs.createWriteStream(file_name)).on('close', function(){
                 callback(image_name);
+            })
+            .on('error', function(err){
+                console.error("DOWNLOAD ERROR:");
+                console.error(err);
             });
       });
     },

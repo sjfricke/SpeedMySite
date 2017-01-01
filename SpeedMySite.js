@@ -24,7 +24,7 @@ var output_location = argv.o;
 var known_black_list = image_process.blackList();
 
 //cleans URL if forgot http cause Nightmare cant use it then
-if (process.argv[2].substring(0,7) != "http://") process.argv[2] = "http://" + process.argv[2];
+if (process.argv[2].substring(0,4) != "http") process.argv[2] = "https://" + process.argv[2];
 
 if (argv.threshold) {
     if (argv.threshold == NaN  || argv.threshold <= 0) {
@@ -61,7 +61,8 @@ nightmare
                 }
                 if (good_img) {                    
                     temp_object.image = $(this);
-                    temp_object.src = ( $(this)[0].src );                     
+                    temp_object.src = ( $(this)[0].src ); 
+                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
                     temp_object.display_width = $(this)[0].clientWidth;
                     temp_object.display_height = $(this)[0].clientHeight;
                     
@@ -81,6 +82,8 @@ nightmare
                     var bg_url = $(this).css('background-image');
                     bg_url = /^url\((['"]?)(.*)\1\)$/.exec(bg_url);
                     temp_object.src = ( bg_url[2] );
+                                        
+                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
                     
                     all_images.push(temp_object);
                 }
