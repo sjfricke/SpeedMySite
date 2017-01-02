@@ -2,24 +2,35 @@ var fs = require('fs'); //used to read and write to file
 var request = require('request'); //used to download
 var sizeOf = require('image-size'); //used to get size
 var resizeImg = require('resize-img');
+var argv = require('minimist')(process.argv.slice(3)); //only used for -v verbose of console.logs()
 
 var __globals = require("./globals"); //used to hold local variables across application;
 
 
+// These functions are exported to modulize the files
+// Have created functions to use global array
 module.exports = {
     
-    download: function(uri, file_name, image_name, index, callback){
+    download: function(index, callback){
         
-        console.log("\turi: " + uri);
-        console.log("\tfile name: " + file_name);
+        var uri = __globals.images[index].src;
+        var file_name = __globals.images[index].file_name;
+        var image_name = __globals.images[index].image_name;        
+        
+        if (argv.v){console.log("\turi: " + uri);}
+        if (argv.v){console.log("\tfile name: " + file_name);}
         
         request.head(uri, function(err, res, body){
-            //console.log('content-type:', res.headers['content-type']);
-            //console.log(file_name + " content-length: " + res.headers['content-length']);
-            console.log("attempting: " + image_name);
+            
+            if (argv.v){console.log("attempting: " + image_name);} // res.headers['content-type']
+            
+            // file size in bytes, note 1024 not 1000 from bytes to KB
+            __globals.images[index].file_size = res.headers['content-length'];            
+            
             //downloads and sends callback when done
-            request(uri).pipe(fs.createWriteStream(file_name)).on('close', function(){
-                callback(image_name, res.headers['content-length'], index);
+            request(uri).pipe(fs.createWriteStream(file_name))
+            .on('close', function(){
+                callback(image_name);
             })
             .on('error', function(err){
                 console.error("DOWNLOAD ERROR:");
@@ -28,64 +39,56 @@ module.exports = {
       });
     },
     
-    checkSize: function(image_list, threshold, callback) {
+    checkSize: function(threshold, callback) {
         var fix_list = [];
-        for (var i = 0; i < image_list.length; i++) {
+        for (var i = 0; i < __globals.images.length; i++) {
               
             //gets actual photo size
-            var dimensions = sizeOf(image_list[i].file_name);
-            image_list[i].old_width = dimensions.width;
-            image_list[i].old_height = dimensions.height;
+            var dimensions = sizeOf(__globals.images[i].file_name);
+            __globals.images[i].old_width = dimensions.width;
+            __globals.images[i].old_height = dimensions.height;
             
             //checks if size is out of size range
             //give 10% margin by default
-            if ((image_list[i].old_width >= image_list[i].display_width * threshold) &&
-                (image_list[i].old_height >= image_list[i].display_height * threshold)
+            if ((__globals.images[i].old_width >= __globals.images[i].display_width * threshold) &&
+                (__globals.images[i].old_height >= __globals.images[i].display_height * threshold)
             ) {
-                image_list[i].resize = true;
-                __globals.size.old += parseInt(image_list[i].file_size); //to compare to size resized
+                __globals.images[i].resize = true;
+                __globals.size.old += parseInt(__globals.images[i].file_size); //to compare to size resized
                 __globals.resize_count++;
-                image_list[i].new_width = Math.floor(image_list[i].display_width * threshold);
-                image_list[i].new_height = Math.floor(image_list[i].display_height * threshold);
+                __globals.images[i].new_width = Math.floor(__globals.images[i].display_width * threshold);
+                __globals.images[i].new_height = Math.floor(__globals.images[i].display_height * threshold);
             } else {
-                image_list[i].resize = false; //better to have false then undefined
+                __globals.images[i].resize = false; //better to have false then undefined
             }
             
-            console.log(image_list[i].image_name + "\n\t\t width: " + image_list[i].old_width + " should be: " + image_list[i].display_width + "\n\t\t height: " + image_list[i].old_height + " should be: " + image_list[i].display_height);
+            // prints out width and heights of display and download size
+            if (argv.v){console.log(__globals.images[i].image_name + "\n\t\t width: " + __globals.images[i].old_width + " should be: " + __globals.images[i].display_width + "\n\t\t height: " + __globals.images[i].old_height + " should be: " + __globals.images[i].display_height);}
         }
-        callback(image_list);
+        callback();
     },    
     
     //directory passed in is new directory to place new photos
-    resize: function(image_list, directory, threshold, callback) {
-        var resize_inputs = [];
-        var resize_outputs = [];
+    resize: function(directory, threshold, callback) {
         
-        image_list.forEach(function(element, index, array) {
+        __globals.images.forEach(function(element, index, array) {
             if (!element.resize) { 
-            //    continue; //skip image, its all good
+                return; //skip image, its all good
             } else {                
-                resizeImg(fs.readFileSync(element.file_name), 
-                          {width : element.new_width, height : element.new_height} )
-                    .then(function(buf){
-                        fs.writeFileSync(directory + element.image_name, buf);
-                        console.log("Resized file wrote to: " + directory + element.image_name);
-                        __globals.size.new += buf.byteLength;   
-                        callback(element);
-                    });   
+                resizeImg(fs.readFileSync(element.file_name), {width : element.new_width, height : element.new_height} )
+                .then(function(buf){
+                    fs.writeFileSync(directory + element.image_name, buf);
+                    
+                    if (argv.v){console.log("Resized file wrote to: " + directory + element.image_name);}
+                    
+                    __globals.images[index].new_file_size = buf.byteLength;   
+                    __globals.size.new += buf.byteLength;   
+                    
+                    callback(element);
+                });   
             }
         });
         
-    },
-    
-    //used to return an array of known black list sites
-    //"blacklist" refers to sources of images not to check
-    //example: google maps
-    blackList: function() {
-        return [
-            "https://maps.googleapis.com",
-            "https://maps.gstatic.com"
-        ]
-    }
+    } 
     
 }

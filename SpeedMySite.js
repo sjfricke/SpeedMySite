@@ -1,32 +1,42 @@
+/********************************************
+Dependencies
+********************************************/
 var Nightmare = require('nightmare'); //used to run the headless browser
 var nightmare = Nightmare({ show: false }); //default is true
 var sanitize = require("sanitize-filename"); //used to make sure file names are correct
 var fs = require('fs-extra'); //used to make directory checking eaiser
 var argv = require('minimist')(process.argv.slice(3)); //used for easy param parsing
 
-
 var image_process = require("./helper_functions/image_process"); //set of image processing functions
 var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
 
+var known_black_list = __globals.blackList;
 
-//Param Checking
-if (!process.argv[2]) {
-    console.log("SpeedMySite needs a URL before it can fix the web\n\ntry:\n\tnode SpeedMySite http://yourSiteToSpeed.up/inserted/here\n");
-    console.log("For more options type:\n\tnode SpeedMySite --help");
-    process.exit(1);
-} else if (argv.help) {
+/********************************************
+Param Checking
+********************************************/
+
+// --help 
+if (argv.help) {
     console.log("-o\t\tOutput location of results");
     console.log("--images\tSettings for any output images");
     console.log("\t\t[true] -Default, adds a folder for both old and new photos\n\t\t[false] will not save any photos to disk, only shows in report\n\t\t[new] will only save the new photos")
     process.exit(1);
 }
 
-var output_location = argv.o;
-var known_black_list = image_process.blackList();
-
-//cleans URL if forgot http cause Nightmare cant use it then
+// checks for a URL
+if (!process.argv[2]) {
+    console.log("SpeedMySite needs a URL before it can fix the web\n\ntry:\n\tnode SpeedMySite http://yourSiteToSpeed.up/inserted/here\n");
+    console.log("For more options type:\n\tnode SpeedMySite --help");
+    process.exit(1);
+}
+// cleans URL if forgot http cause Nightmare cant use it then
 if (process.argv[2].substring(0,4) != "http") process.argv[2] = "https://" + process.argv[2];
 
+// -o
+var output_location = argv.o;
+
+// --threshold
 if (argv.threshold) {
     if (argv.threshold == NaN  || argv.threshold <= 0) {
         console.log("--threshold needs to be a positive value representing the percentage");
@@ -38,19 +48,27 @@ if (argv.threshold) {
     argv.threshold = ((10 / 100) + 1); //default - 110%
 }
 
+/********************************************
+Nightmare (headless browser) sequence
+********************************************/
 nightmare
+    // First go to site
     .goto(process.argv[2])  
+
+    // inject jquery to be able to evaluate DOM
     .inject('js', 'files/jquery.min.js') //TODO, not force pages with jQuery to load
+
+    // runs a console expression on site to extract image details
     .evaluate(function(known_black_list){
         var all_images = [];
             
-        //loops through and gets all the images on page useing jQuery
+        // loops through and gets all the images on page useing jQuery
         $('*').each(function(){ 
             var backImg;
             var good_img = true;
-            var temp_object = {}; //need to be reset each loop #async
+            var temp_object = {}; // need to be reset each loop #async
             
-            //image is inline of html
+            // image is inline of html
             if ($(this).is('img') ) {
                 
                 //check if image url is on the known black list of URLs
@@ -95,15 +113,21 @@ nightmare
         return all_images;
     
     }, known_black_list)
+    
+    // ends nightmare
     .end()
     .then(function (result) {
     
+        __globals.images = result;    
         __globals.image_count = result.length;
+        
+        if (argv.v) {
+            console.log("**************************\n");
+            console.log(__globals.image_count + " images found");
+            console.log("\n**************************\n");
+        }
     
-        console.log("**************************\n");
-        console.log(__globals.image_count + " images found");
-        console.log("**************************\n");
-    
+        // creates directory to store files
         var directory_old = (argv.o) ? (argv.o + "/old/") : "SpeedMySite_Results/old/";
         var directory_new = (argv.o) ? (argv.o + "/new/") : "SpeedMySite_Results/new/";
         
@@ -113,49 +137,66 @@ nightmare
         fs.ensureDirSync(directory_new, function (err) { console.log(err); })
     
         for (var i = 0; i < __globals.image_count; i++) {  
-            if (result.src != 'undefined' || result.src != null){             
-                console.log(i + ": ");                
-                              
-                result[i].image_name = sanitize(result[i].src.substring(result[i].src.lastIndexOf("/") + 1));
-                result[i].file_name = directory_old + result[i].image_name;
-                result[i].file_size = -1;
+            
+            // makes sure there is a valid src for the iamge
+            if (__globals.images[i].src != 'undefined' || __globals.images[i].src != null){   
                 
-                image_process.download(result[i].src, result[i].file_name, result[i].image_name, i, function(return_image, file_size, index){            
-                                        
-                    //returns file size in bytes, note 1024 not 1000 from bytes to KB
-                    result[index].file_size = file_size;
-                    
+                if (argv.v){console.log(i + ": ");}         
+                
+                // need to make sure its a valid file name, idk how its saved on the server anyways... TODO
+                __globals.images[i].image_name = sanitize(__globals.images[i].src.substring(__globals.images[i].src.lastIndexOf("/") + 1));
+                
+                // creates full file name
+                __globals.images[i].file_name = directory_old + __globals.images[i].image_name;
+                
+                // sets file size to -1 to easy validate if not changed
+                __globals.images[i].file_size = -1;
+                
+                __globals.counter = 0; //reset counter
+                
+                // downloads each image by passing in index of loop
+                image_process.download(i, function(return_image){            
+                                                            
                     //counts to wait to sync/barrier async for all images to download before resizing
                     __globals.counter++;
-                    console.log(return_image + " saved! \t" + __globals.counter + " of " + __globals.image_count);
-                    
-                    
-                    if (__globals.counter == __globals.image_count) {                        
-                        console.log("**************************");
-                        __globals.counter = 0; //reset if used prior
+                    if (argv.v){console.log(return_image + " saved! \t" + __globals.counter + " of " + __globals.image_count);}
+                                        
+                    // All files have been downloaded
+                    if (__globals.counter == __globals.image_count) {  
                         
-                        image_process.checkSize(result, argv.threshold, function(checked_images){
-                            image_process.resize(checked_images, directory_new, argv.threshold, function(element){
+                        __globals.counter = 0; //reset counter                        
+                        if (argv.v){console.log("\n**************************\n");}
+                        
+                        // checks each image for needed to be resized or not
+                        image_process.checkSize(argv.threshold, function(){                            
+                            if (argv.v){console.log("\n**************************\n");}
+                            
+                            // resizes all images marked as too big
+                            image_process.resize(directory_new, argv.threshold, function(element){
                                 
                                  __globals.counter++;
 
                                 if (__globals.counter == __globals.resize_count) {   
                                     //done, report time                                                       
-                                    console.log("\n**************************\n");
+                                    if (argv.v){console.log("\n**************************\n");}
                                     console.log("SpeedMySite Report:");
-                                    console.log("_____________________________");
+                                    console.log("_______________________________________________");
                                     console.log("Files found: " + __globals.image_count);
+                                    console.log("Files found for resizing: " + __globals.resize_count);                                    
                                     console.log("Images Resized: ");
-                                    for(var i = 0; i < __globals.resize_count; i++){
-                                        console.log("\t" + checked_images[i].image_name + " from " + checked_images[i].file_size + " to ");
+                                    for(var i = 0; i < __globals.image_count; i++){
+                                        if (__globals.images[i].resize) {
+                                            console.log("\t" + __globals.images[i].image_name + " from " + __globals.images[i].file_size + " to " + __globals.images[i].new_file_size + " bytes");
+                                        }
                                     } 
-                                    console.log("_____________________________");
-                                    console.log("Old files size: " + __globals.size.old + " bytes");
-                                    console.log("New files size: " + __globals.size.new + " bytes");
+                                    console.log("_______________________________________________");
+                                    console.log("Old files size: \t" + __globals.size.old + " bytes");
+                                    console.log("New files size: \t" + __globals.size.new + " bytes");
+                                    console.log("_______________________________________________");
                                     var total_saved = (__globals.size.old - __globals.size.new);
-                                    console.log("Total size saved: " + total_saved + " bytes");                                    
-                                    console.log("or\t" + (total_saved / 1024).toFixed(3) + " KB");
-                                    console.log("or\t" + (total_saved / 1024 / 1024).toFixed(3) + " MB");
+                                    console.log("Total size saved: \t" + total_saved + " bytes");                                    
+                                    console.log("\tor\t\t" + (total_saved / 1024).toFixed(3) + " KB");
+                                    console.log("\tor\t\t" + (total_saved / 1024 / 1024).toFixed(3) + " MB");
                                 }
                                 
                                 
@@ -166,7 +207,7 @@ nightmare
                 });
             }
         }    
-        console.log("**************************"); //barrier after file and url display
+        if (argv.v){console.log("\n**************************\n");} //barrier after file and url display
     })
     .catch(function (error) {
         console.error('Search failed:', error);
