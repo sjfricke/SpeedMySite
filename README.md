@@ -19,11 +19,13 @@ It will output a folder with a write up of what you can do to speed up the site,
 
   * No parameters
    * Example: `node SpeedMySite http://www.google.com`
-  * `-o` output location of results
+  * `-o` Output location of results
    * Example: `node SpeedMySite http://www.google.com -o ~/myOtherFolder`
+  * `-v` Verbose mode
+   * Example: `node SpeedMySite http://www.google.com -o ~/myOtherFolder -v`
   
   -------
-  Future
+  Future - TODO
   
   * `--images` settings for any output images
    * Options:
@@ -31,3 +33,7 @@ It will output a folder with a write up of what you can do to speed up the site,
      * `false` will not save any photos to disk, only shows in report
      * `new` will only save the new photos
    * Example: `node SpeedMySite http://www.google.com --images new`
+
+## Current Issues
+
+Have found I still need to work on a way to correctly get photos when they are sized and styled with background css attributes. Also dynamically loaded pages (like angular site) that don't have the image up don't have a display size so will need to find the size in the css.

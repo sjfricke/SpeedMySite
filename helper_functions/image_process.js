@@ -2,7 +2,7 @@ var fs = require('fs'); //used to read and write to file
 var request = require('request'); //used to download
 var sizeOf = require('image-size'); //used to get size
 var resizeImg = require('resize-img');
-var argv = require('minimist')(process.argv.slice(3)); //only used for -v verbose of console.logs()
+var argv = require('minimist')(process.argv.slice(2)); //only used for -v verbose of console.logs()
 
 var __globals = require("./globals"); //used to hold local variables across application;
 

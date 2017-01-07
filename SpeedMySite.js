@@ -5,7 +5,7 @@ var Nightmare = require('nightmare'); //used to run the headless browser
 var nightmare = Nightmare({ show: false }); //default is true
 var sanitize = require("sanitize-filename"); //used to make sure file names are correct
 var fs = require('fs-extra'); //used to make directory checking eaiser
-var argv = require('minimist')(process.argv.slice(3)); //used for easy param parsing
+var argv = require('minimist')(process.argv.slice(2)); //used for easy param parsing
 
 var image_process = require("./helper_functions/image_process"); //set of image processing functions
 var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
@@ -18,9 +18,10 @@ Param Checking
 
 // --help 
 if (argv.help) {
-    console.log("-o\t\tOutput location of results");
-    console.log("--images\tSettings for any output images");
-    console.log("\t\t[true] -Default, adds a folder for both old and new photos\n\t\t[false] will not save any photos to disk, only shows in report\n\t\t[new] will only save the new photos")
+    console.log("-o <folder>\tOutput location of results");
+    console.log("-v\t\tVerbose mode"); 
+    //console.log("--images\tSettings for any output images");
+    //console.log("\t\t[true] -Default, adds a folder for both old and new photos\n\t\t[false] will not save any photos to disk, only shows in report\n\t\t[new] will only save the new photos")
     process.exit(1);
 }
 
