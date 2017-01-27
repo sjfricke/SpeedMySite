@@ -39,3 +39,5 @@ It will output a folder with a write up of what you can do to speed up the site,
 Have found I still need to work on a way to correctly get photos when they are sized and styled with background css attributes. Also dynamically loaded pages (like angular site) that don't have the image up don't have a display size so will need to find the size in the css.
 
 Duplicate - it catches duplicates and handles it correctly, but I want to fix it to display in report, otherwise it will say `n` images fixed and only show `n-1` images in the folder
+
+resize-img node modules seems to not want to work on Windows, will need to figure that out as well
