@@ -18,8 +18,9 @@ Param Checking
 
 // --help 
 if (argv.help) {
-    console.log("-o <folder>\tOutput location of results");
-    console.log("-v\t\tVerbose mode"); 
+    console.log("-o <folder>\n\tOutput location of resultsn\n");
+    console.log("-v\n\tVerbose mode\n");
+    console.log("--threshold <value>\n\tAmount of tolerence to give to images being over size\n\tneeds to be value in percent (so over 100) and default is 110%\n"); 
     //console.log("--images\tSettings for any output images");
     //console.log("\t\t[true] -Default, adds a folder for both old and new photos\n\t\t[false] will not save any photos to disk, only shows in report\n\t\t[new] will only save the new photos")
     process.exit(1);
@@ -39,8 +40,8 @@ var output_location = argv.o;
 
 // --threshold
 if (argv.threshold) {
-    if (argv.threshold == NaN  || argv.threshold <= 0) {
-        console.log("--threshold needs to be a positive value representing the percentage");
+    if (argv.threshold == NaN  || argv.threshold <= 100) {
+        console.log("--threshold needs to be a positive value representing the percentage (so over 100)\n\tdefault is 110%");
         process.exit(1);
     } else {
         argv.threshold = ((argv.threshold / 100) + 1); //valid threshold as a inclusive percent (ex: 110%)
