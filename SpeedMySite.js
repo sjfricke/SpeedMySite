@@ -84,6 +84,7 @@ nightmare
                     temp_object.src = ( $(this)[0].src ); 
                     if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
 		    else if (temp_object.src.endsWith(".svg")) { return; } //don't add svg to list
+		    else if (temp_object.src.indexOf("data:") == 0) { return; } //no base 64 images for now
                     temp_object.display_width = $(this)[0].clientWidth;
                     temp_object.display_height = $(this)[0].clientHeight;
                     
@@ -104,8 +105,10 @@ nightmare
                     bg_url = /^url\((['"]?)(.*)\1\)$/.exec(bg_url);
                     temp_object.src = ( bg_url[2] );
                                         
-                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
-                    
+                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list                    
+		    else if (temp_object.src.endsWith(".svg")) { return; } //don't add svg to list
+		    else if (temp_object.src.indexOf("data:") == 0) { return; } //no base 64 images for now
+		    
                     all_images.push(temp_object);
                 }
             }            
