@@ -83,6 +83,7 @@ nightmare
                     temp_object.image = $(this);
                     temp_object.src = ( $(this)[0].src ); 
                     if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
+		    else if (temp_object.src.endsWith(".svg")) { return; } //don't add svg to list
                     temp_object.display_width = $(this)[0].clientWidth;
                     temp_object.display_height = $(this)[0].clientHeight;
                     
@@ -174,11 +175,25 @@ nightmare
                             
                             // resizes all images marked as too big
                             image_process.resize(directory_new, argv.threshold, function(element){
-                                
-                                 __globals.counter++;
 
+				if (element == null) {
+				    console.log("resize failed");
+				} else if (element == 0) {				                                             
+				    // check if test passed with no need to resize
+				    if (argv.v){console.log("\n**************************\n");}
+                                    console.log("SpeedMySite Report:");
+                                    console.log("_______________________________________________");
+                                    console.log("Files found: " + __globals.image_count);
+                                    console.log("Files found for resizing: " + __globals.resize_count);                                    
+                                    console.log("CONGRATULATIONS!\nAll photos found were within size");
+				    //return <- need?
+				}
+
+                                __globals.counter++;
+				
+				// calls when resized all photos
                                 if (__globals.counter == __globals.resize_count) {   
-                                    //done, report time                                                       
+                                    // done, report time                                                       
                                     if (argv.v){console.log("\n**************************\n");}
                                     console.log("SpeedMySite Report:");
                                     console.log("_______________________________________________");

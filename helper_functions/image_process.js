@@ -44,13 +44,24 @@ module.exports = {
         for (var i = 0; i < __globals.images.length; i++) {
               
             //gets actual photo size
-            var dimensions = sizeOf(__globals.images[i].file_name);
-            __globals.images[i].old_width = dimensions.width;
-            __globals.images[i].old_height = dimensions.height;
-            
+	    //console.log(__globals.images[i].file_name);
+	    try {
+		var dimensions = sizeOf(__globals.images[i].file_name);
+		__globals.images[i].old_width = dimensions.width;
+		__globals.images[i].old_height = dimensions.height;
+	    } catch (e) {
+		console.log("\nWARNING: " + __globals.images[i].file_name + "exceeded the buffer limit of the check size library...Going to assume the image is TOO LARGE!!!\n");
+		__globals.images[i].old_width = 2048;
+		__globals.images[i].old_height = 2048;
+	    }
+
             //checks if size is out of size range
             //give 10% margin by default
-            if ((__globals.images[i].old_width >= __globals.images[i].display_width * threshold) &&
+	    if (__globals.images[i].display_width < 1 || __globals.images[i].display_height < 1) {
+		// checks if size is zero as it throws error in resizer
+		__globals.images[i].resize = false;
+		__globals.images[i].zero = true;
+	    } else  if ((__globals.images[i].old_width >= __globals.images[i].display_width * threshold) &&
                 (__globals.images[i].old_height >= __globals.images[i].display_height * threshold)
             ) {
                 __globals.images[i].resize = true;
@@ -63,18 +74,31 @@ module.exports = {
             }
             
             // prints out width and heights of display and download size
-            if (argv.v){console.log(__globals.images[i].image_name + "\n\t\t width: " + __globals.images[i].old_width + " should be: " + __globals.images[i].display_width + "\n\t\t height: " + __globals.images[i].old_height + " should be: " + __globals.images[i].display_height);}
-        }
+            if (argv.v){
+		if (__globals.images[i].zero) {
+		    console.log(__globals.images[i].image_name + "\n\t\t No display size found! ");
+		} else {
+		    console.log(__globals.images[i].image_name + "\n\t\t width: " + __globals.images[i].old_width + " should be: " + __globals.images[i].display_width + "\n\t\t height: " + __globals.images[i].old_height + " should be: " + __globals.images[i].display_height);
+		}
+            }
+	}
         callback();
     },    
     
     //directory passed in is new directory to place new photos
     resize: function(directory, threshold, callback) {
-        
+
+	// checks here for passed site with no resize
+	// will just return and never callback otherwise
+	if (__globals.resize_count == 0) {
+	    callback(0);
+	}
+	
         __globals.images.forEach(function(element, index, array) {
             if (!element.resize) { 
                 return; //skip image, its all good
-            } else {                
+            } else {
+		//console.log("file_name: " + element.file_name +"\tnew_width: " + element.new_width + "\tnew_height: " + element.new_height); 
                 resizeImg(fs.readFileSync(element.file_name), {width : element.new_width, height : element.new_height} )
                 .then(function(buf){
                     fs.writeFileSync(directory + element.image_name, buf);
@@ -85,7 +109,12 @@ module.exports = {
                     __globals.size.new += buf.byteLength;   
                     
                     callback(element);
-                });   
+                })
+		.catch(function(err){
+		    console.log(err);
+		    console.log("RESIZE FAILED");
+		    callback(null);
+		});   
             }
         });
         
