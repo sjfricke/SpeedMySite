@@ -8,6 +8,7 @@ var fs = require('fs-extra'); //used to make directory checking eaiser
 var argv = require('minimist')(process.argv.slice(2)); //used for easy param parsing
 
 var image_process = require("./helper_functions/image_process"); //set of image processing functions
+var sanitization = require("./helper_functions/sanitization");
 var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
 
 var known_black_list = __globals.blackList;
@@ -73,7 +74,7 @@ nightmare
             // image is inline of html
             if ($(this).is('img') ) {
                 
-                //check if image url is on the known black list of URLs
+                // check if image url is on the known black list of URLs
                 for(var i = 0; i < known_black_list.length; i++) {
                     if ( $(this)[0].src.indexOf(known_black_list[i]) != -1) {
                         good_img = false;
@@ -82,10 +83,7 @@ nightmare
                 }
                 if (good_img) {                    
                     temp_object.image = $(this);
-                    temp_object.src = ( $(this)[0].src ); 
-                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list
-		    else if (temp_object.src.endsWith(".svg")) { return; } //don't add svg to list
-		    else if (temp_object.src.indexOf("data:") == 0) { return; } //no base 64 images for now
+                    temp_object.src = ( $(this)[0].src );
                     temp_object.display_width = $(this)[0].clientWidth;
                     temp_object.display_height = $(this)[0].clientHeight;
                     
@@ -105,16 +103,12 @@ nightmare
                     var bg_url = $(this).css('background-image');
                     bg_url = /^url\((['"]?)(.*)\1\)$/.exec(bg_url);
                     temp_object.src = ( bg_url[2] );
-                                        
-                    if (temp_object.src.endsWith(".gif")) { return; } //don't add gif to list                    
-		    else if (temp_object.src.endsWith(".svg")) { return; } //don't add svg to list
-		    else if (temp_object.src.indexOf("data:") == 0) { return; } //no base 64 images for now
-		    
+                    
                     all_images.push(temp_object);
                 }
             }            
             //dont push to all_image each time as most of the * are not images            
-        });       
+        }); // end of for each loop
            
         return all_images;
     
@@ -122,10 +116,19 @@ nightmare
     
     // ends nightmare
     .end()
-    .then(function (result) {
-    
-        __globals.images = result;    
-        __globals.image_count = result.length;
+    .then(function (result_dirty) {
+
+	// need to sanitize the data results first
+	for (var i = 0; i < result_dirty.length; i++) {
+	    if ( sanitization.fileTypeCheck(result_dirty[i].src) == false ) {
+		continue; //bad data
+	    } else {
+		__globals.images.push(result_dirty[i]);
+	    }
+	}
+
+        // TODO, get rid of
+        __globals.image_count = __globals.images.length;
         
         if (argv.v) {
             console.log("**************************\n");

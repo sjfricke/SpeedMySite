@@ -23,12 +23,23 @@ module.exports = {
     // generic counter to synch up asynch operations
     counter : 0,
     
-    //used to return an array of known black list sites
-    //"blacklist" refers to sources of images not to check
-    //example: google maps
+    // used to return an array of known black list sites
+    // "blacklist" refers to sources of images not to check
+    // example: Google Maps
     blackList: [
-            "https://maps.googleapis.com",
-            "https://maps.gstatic.com"
-    ]
+        "https://maps.googleapis.com",
+        "https://maps.gstatic.com",
+	"https://www.facebook.com"
+    ],
+
+    // List of file types that currently not supported
     
+    file_blacklist_prefix: [
+	"data:"
+    ],
+
+    file_blacklist_suffix: [
+	".svg",
+	".gif"	
+    ]
 }
