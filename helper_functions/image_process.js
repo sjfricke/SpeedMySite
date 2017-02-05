@@ -10,23 +10,23 @@ var __globals = require("./globals"); //used to hold local variables across appl
 // These functions are exported to modulize the files
 // Have created functions to use global array
 module.exports = {
-    
+
     download: function(index, callback){
-        
+
         var uri = __globals.images[index].src;
         var file_name = __globals.images[index].file_name;
-        var image_name = __globals.images[index].image_name;        
-        
+        var image_name = __globals.images[index].image_name;
+
         if (argv.v){console.log("\turi: " + uri);}
         if (argv.v){console.log("\tfile name: " + file_name);}
-        
+
         request.head(uri, function(err, res, body){
-            
+
             if (argv.v){console.log("attempting: " + image_name);} // res.headers['content-type']
-            
+
             // file size in bytes, note 1024 not 1000 from bytes to KB
-            __globals.images[index].file_size = res.headers['content-length'];            
-            
+            __globals.images[index].file_size = res.headers['content-length'];
+
             //downloads and sends callback when done
             request(uri).pipe(fs.createWriteStream(file_name))
             .on('close', function(){
@@ -38,11 +38,11 @@ module.exports = {
             });
       });
     },
-    
+
     checkSize: function(threshold, callback) {
         var fix_list = [];
         for (var i = 0; i < __globals.images.length; i++) {
-              
+
             //gets actual photo size
 	    //console.log(__globals.images[i].file_name);
 	    try {
@@ -72,7 +72,7 @@ module.exports = {
             } else {
                 __globals.images[i].resize = false; //better to have false then undefined
             }
-            
+
             // prints out width and heights of display and download size
             if (argv.v){
 		if (__globals.images[i].zero) {
@@ -83,8 +83,8 @@ module.exports = {
             }
 	}
         callback();
-    },    
-    
+    },
+
     //directory passed in is new directory to place new photos
     resize: function(directory, threshold, callback) {
 
@@ -93,31 +93,29 @@ module.exports = {
 	if (__globals.resize_count == 0) {
 	    callback(0);
 	}
-	
+
         __globals.images.forEach(function(element, index, array) {
-            if (!element.resize) { 
+            if (!element.resize) {
                 return; //skip image, its all good
             } else {
 		//console.log("file_name: " + element.file_name +"\tnew_width: " + element.new_width + "\tnew_height: " + element.new_height); 
                 resizeImg(fs.readFileSync(element.file_name), {width : element.new_width, height : element.new_height} )
                 .then(function(buf){
                     fs.writeFileSync(directory + element.image_name, buf);
-                    
+
                     if (argv.v){console.log("Resized file wrote to: " + directory + element.image_name);}
-                    
-                    __globals.images[index].new_file_size = buf.byteLength;   
-                    __globals.size.new += buf.byteLength;   
-                    
+
+                    __globals.images[index].new_file_size = buf.byteLength;
+                    __globals.size.new += buf.byteLength;
+
                     callback(element);
                 })
 		.catch(function(err){
 		    console.log(err);
 		    console.log("RESIZE FAILED");
 		    callback(null);
-		});   
+		});
             }
         });
-        
-    } 
-    
+    }
 }
