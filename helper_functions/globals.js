@@ -33,7 +33,6 @@ module.exports = {
     ],
 
     // List of file types that currently not supported
-
     file_blacklist_prefix: [
 	"data:"
     ],
@@ -42,4 +41,4 @@ module.exports = {
 	".svg",
 	".gif"
     ]
-}
+} //module export end

@@ -31,6 +31,6 @@ module.exports = {
                return false;
 	   }
        }
-   }
+   } // srcClean end
 
-}
+} //module export end

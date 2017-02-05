@@ -1,15 +1,15 @@
 /********************************************
 Dependencies
 ********************************************/
-var Nightmare = require('nightmare'); //used to run the headless browser
-var nightmare = Nightmare({ show: false }); //default is true
-var sanitize = require("sanitize-filename"); //used to make sure file names are correct
-var fs = require('fs-extra'); //used to make directory checking eaiser
-var argv = require('minimist')(process.argv.slice(2)); //used for easy param parsing
+var Nightmare = require('nightmare'); // used to run the headless browser
+var nightmare = Nightmare({ show: false }); // default is true
+var sanitize = require("sanitize-filename"); // used to make sure file names are correct
+var fs = require('fs-extra'); // used to make directory checking eaiser
+var argv = require('minimist')(process.argv.slice(2)); // used for easy param parsing
 
-var image_process = require("./helper_functions/image_process"); //set of image processing functions
+var image_process = require("./helper_functions/image_process"); // set of image processing functions
 var sanitization = require("./helper_functions/sanitization");
-var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
+var __globals = require("./helper_functions/globals"); // used to hold local variables across application;
 
 /********************************************
 Param Checking
@@ -43,10 +43,10 @@ if (argv.threshold) {
         console.log("--threshold needs to be a positive value representing the percentage (so over 100)\n\tdefault is 110%");
         process.exit(1);
     } else {
-        argv.threshold = ((argv.threshold / 100) + 1); //valid threshold as a inclusive percent (ex: 110%)
+        argv.threshold = ((argv.threshold / 100) + 1); // valid threshold as a inclusive percent (ex: 110%)
     }
 } else {
-    argv.threshold = ((10 / 100) + 1); //default - 110%
+    argv.threshold = ((10 / 100) + 1); // default - 110%
 }
 
 /********************************************
@@ -80,8 +80,8 @@ nightmare
                 all_images.push(temp_object);
 
             } else {
-                //image is embedded as a background image via css
-                //uses regex to grab image url from it
+                // image is embedded as a background image via css
+                // uses regex to grab image url from it
                 backImg = $(this).css('background-image');
                 if (backImg != 'none') {
 
@@ -96,25 +96,23 @@ nightmare
                     all_images.push(temp_object);
                 }
             }
-            //dont push to all_image each time as most of the * are not image
-        }); // end of for each loop
+            // dont push to all_image each time as most of the * are not image
+        }); // $().each() end
 
         return all_images;
 
-    })
-
-    // ends nightmare
-    .end()
+    }) //Evaluate end
+    .end() // ends nightmare
     .then(function (result_dirty) {
 
-	// need to sanitize the data results first
-	for (var i = 0; i < result_dirty.length; i++) {
-	    if ( sanitization.srcClean(result_dirty[i].src) == false ) {
-		continue; //bad data
-	    } else {
-		__globals.images.push(result_dirty[i]);
-	    }
-	}
+    	// need to sanitize the data results first
+    	for (var i = 0; i < result_dirty.length; i++) {
+    	    if ( sanitization.srcClean(result_dirty[i].src) == false ) {
+    		continue; //bad data
+    	    } else {
+    		__globals.images.push(result_dirty[i]);
+    	    }
+    	}
 
         // TODO, get rid of
         __globals.image_count = __globals.images.length;
@@ -135,7 +133,7 @@ nightmare
 
         for (var i = 0; i < __globals.image_count; i++) {
 
-            // makes sure there is a valid src for the iamge
+            // TODO makes sure there is a valid src for the iamge
             if (__globals.images[i].src != 'undefined' || __globals.images[i].src != null) {
 
                 if (argv.v){console.log(i + ": ");}
@@ -152,7 +150,7 @@ nightmare
                 __globals.counter = 0; //reset counter
 
                 // downloads each image by passing in index of loop
-                image_process.download(i, function(return_image){
+                image_process.download(i, function(return_image) {
 
                     //counts to wait to sync/barrier async for all images to download before resizing
                     __globals.counter++;
@@ -171,22 +169,22 @@ nightmare
                             // resizes all images marked as too big
                             image_process.resize(directory_new, argv.threshold, function(element) {
 
-				if (element == null) {
-				    console.log("resize failed");
-				} else if (element == 0) {
-				    // check if test passed with no need to resize
-				    if (argv.v){console.log("\n**************************\n");}
-                                    console.log("SpeedMySite Report:");
-                                    console.log("_______________________________________________");
-                                    console.log("Files found: " + __globals.image_count);
-                                    console.log("Files found for resizing: " + __globals.resize_count);                                    
-                                    console.log("CONGRATULATIONS!\nAll photos found were within size");
-				    //return <- need?
-				}
+                				if (element == null) {
+                				    console.log("resize failed");
+                				} else if (element == 0) {
+                				    // check if test passed with no need to resize
+                				    if (argv.v){console.log("\n**************************\n");}
+                                                    console.log("SpeedMySite Report:");
+                                                    console.log("_______________________________________________");
+                                                    console.log("Files found: " + __globals.image_count);
+                                                    console.log("Files found for resizing: " + __globals.resize_count);                                    
+                                                    console.log("CONGRATULATIONS!\nAll photos found were within size");
+                				    //return <- need?
+                				}
 
-                                __globals.counter++;
+                                                __globals.counter++;
 
-				// calls when resized all photos
+                				// calls when resized all photos
                                 if (__globals.counter == __globals.resize_count) {
                                     // done, report time
                                     if (argv.v){console.log("\n**************************\n");}
@@ -209,14 +207,14 @@ nightmare
                                     console.log("\tor\t\t" + (total_saved / 1024).toFixed(3) + " KB");
                                     console.log("\tor\t\t" + (total_saved / 1024 / 1024).toFixed(3) + " MB");
                                 }
-                            })
-                        });
-                    }
-                });
-            }
-        }
+                            }) // image_process.resize() end
+                        }); // image_process.checkSize() end
+                    } // if counter == image_count
+                }); // image_process.download
+            } // null src check
+        } // image loop
         if (argv.v){console.log("\n**************************\n");} //barrier after file and url display
-    })
+    }) //.then() end
     .catch(function (error) {
         console.error('Search failed:', error);
     }); //end of Nightmare
