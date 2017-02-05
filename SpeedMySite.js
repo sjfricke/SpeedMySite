@@ -11,8 +11,6 @@ var image_process = require("./helper_functions/image_process"); //set of image 
 var sanitization = require("./helper_functions/sanitization");
 var __globals = require("./helper_functions/globals"); //used to hold local variables across application;
 
-var known_black_list = __globals.blackList;
-
 /********************************************
 Param Checking
 ********************************************/
@@ -62,7 +60,7 @@ nightmare
     .inject('js', 'files/jquery.min.js') //TODO, not force pages with jQuery to load
 
     // runs a console expression on site to extract image details
-    .evaluate(function(known_black_list){
+    .evaluate(function(){
         var all_images = [];
             
         // loops through and gets all the images on page useing jQuery
@@ -74,21 +72,12 @@ nightmare
             // image is inline of html
             if ($(this).is('img') ) {
                 
-                // check if image url is on the known black list of URLs
-                for(var i = 0; i < known_black_list.length; i++) {
-                    if ( $(this)[0].src.indexOf(known_black_list[i]) != -1) {
-                        good_img = false;
-                        break; //found image on list
-                    }
-                }
-                if (good_img) {                    
-                    temp_object.image = $(this);
-                    temp_object.src = ( $(this)[0].src );
-                    temp_object.display_width = $(this)[0].clientWidth;
-                    temp_object.display_height = $(this)[0].clientHeight;
-                    
-                    all_images.push(temp_object);
-                }
+                temp_object.image = $(this);
+                temp_object.src = ( $(this)[0].src );
+                temp_object.display_width = $(this)[0].clientWidth;
+                temp_object.display_height = $(this)[0].clientHeight;
+                
+                all_images.push(temp_object);
                 
             } else {
                 //image is embedded as a background image via css    
@@ -112,7 +101,7 @@ nightmare
            
         return all_images;
     
-    }, known_black_list)
+    })
     
     // ends nightmare
     .end()
@@ -120,7 +109,7 @@ nightmare
 
 	// need to sanitize the data results first
 	for (var i = 0; i < result_dirty.length; i++) {
-	    if ( sanitization.fileTypeCheck(result_dirty[i].src) == false ) {
+	    if ( sanitization.srcClean(result_dirty[i].src) == false ) {
 		continue; //bad data
 	    } else {
 		__globals.images.push(result_dirty[i]);

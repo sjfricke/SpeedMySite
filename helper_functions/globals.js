@@ -26,7 +26,7 @@ module.exports = {
     // used to return an array of known black list sites
     // "blacklist" refers to sources of images not to check
     // example: Google Maps
-    blackList: [
+    site_blacklist: [
         "https://maps.googleapis.com",
         "https://maps.gstatic.com",
 	"https://www.facebook.com"
